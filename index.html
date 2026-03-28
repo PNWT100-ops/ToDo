@@ -68,10 +68,13 @@
 
         /* ─── ① 起床・就寝時間 ─── */
         .time-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            display: flex;
             gap: 8px;
             align-items: end;
+        }
+        .time-field {
+            flex: 0 0 auto;
+            width: 110px;
         }
         .time-field label {
             display: block;
@@ -82,12 +85,12 @@
         }
         .time-field input[type="time"] {
             width: 100%;
-            padding: 6px 6px;
+            padding: 6px 5px;
             border: 1px solid var(--border);
             border-radius: 8px;
             background: var(--surface2);
             font-family: 'DM Mono', monospace;
-            font-size: 0.88em;
+            font-size: 0.82em;
             color: var(--text);
             outline: none;
             transition: border-color 0.2s;
@@ -97,6 +100,8 @@
         }
 
         .remaining-display {
+            flex: 0 0 auto;
+            width: 90px;
             text-align: center;
             padding: 6px 8px;
             background: var(--accent-light);
@@ -217,25 +222,25 @@
         /* Task rows */
         .task-row {
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 8px;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
             background: var(--surface);
             transition: opacity 0.2s;
         }
         .task-row.dragging { opacity: 0.4; }
+        /* 上段：ドラッグ＋チェック＋タスク名 */
         .task-row-main {
             display: flex;
             align-items: center;
             gap: 6px;
-            flex: 1;
-            min-width: 0;
         }
+        /* 下段：タグ＋予定＋ボタン */
         .task-row-controls {
             display: flex;
             align-items: center;
-            gap: 5px;
-            margin-left: auto;
+            gap: 6px;
+            padding-left: 28px; /* drag+check幅分のインデント */
         }
         .drag-handle {
             cursor: grab;
@@ -266,7 +271,7 @@
         }
         .task-input:focus { border-color: var(--accent); }
         .task-tag-select {
-            padding: 9px 2px;
+            padding: 5px 2px;
             border: 1px solid var(--border);
             border-radius: 7px;
             background: var(--surface2);
@@ -277,11 +282,11 @@
             text-align: center;
             width: 44px;
             flex-shrink: 0;
-            font-size: 0.9em;
+            font-size: 0.85em;
         }
         .task-time {
-            width: 48px;
-            padding: 9px 4px;
+            width: 60px;
+            padding: 5px 4px;
             border: 1px solid var(--border);
             border-radius: 7px;
             background: var(--surface2);
