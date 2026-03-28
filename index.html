@@ -74,7 +74,7 @@
         }
         .time-field {
             flex: 0 0 auto;
-            width: 110px;
+            width: 88px;
         }
         .time-field label {
             display: block;
@@ -101,7 +101,7 @@
 
         .remaining-display {
             flex: 0 0 auto;
-            width: 90px;
+            width: 76px;
             text-align: center;
             padding: 6px 8px;
             background: var(--accent-light);
@@ -223,24 +223,23 @@
         .task-row {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
             margin-bottom: 10px;
             background: var(--surface);
             transition: opacity 0.2s;
         }
         .task-row.dragging { opacity: 0.4; }
-        /* 上段：ドラッグ＋チェック＋タスク名 */
+        /* 上段：ハンドル＋チェック＋タグ＋ボタン */
         .task-row-main {
             display: flex;
             align-items: center;
             gap: 6px;
         }
-        /* 下段：タグ＋予定＋ボタン */
+        /* 下段：タスク名入力欄 */
         .task-row-controls {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding-left: 28px; /* drag+check幅分のインデント */
+            padding-left: 4px;
         }
         .drag-handle {
             cursor: grab;
@@ -259,7 +258,8 @@
         }
         .task-input {
             flex-grow: 1;
-            padding: 9px 10px;
+            width: 100%;
+            padding: 8px 10px;
             border: 1px solid var(--border);
             border-radius: 7px;
             background: var(--surface2);
@@ -696,6 +696,10 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     div.addEventListener('dragstart', () => div.classList.add('dragging'));
     div.addEventListener('dragend',   () => { div.classList.remove('dragging'); saveTasks(); });
 
+    // ── 上段 ──
+    const mainRow = document.createElement('div');
+    mainRow.className = 'task-row-main';
+
     const handle = document.createElement('span');
     handle.className = 'drag-handle';
     handle.textContent = '⣿';
@@ -705,18 +709,6 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     chk.className = 'task-check';
     chk.checked = done;
     chk.addEventListener('change', () => { div.classList.toggle('done', chk.checked); saveTasks(); });
-
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.className = 'task-input';
-    inp.value = text;
-    inp.placeholder = 'タスク';
-    inp.addEventListener('input', saveTasks);
-
-    // main row: drag + check + input
-    const mainRow = document.createElement('div');
-    mainRow.className = 'task-row-main';
-    mainRow.append(handle, chk, inp);
 
     const tagSel = document.createElement('select');
     tagSel.className = 'task-tag-select';
@@ -735,6 +727,9 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     estInp.placeholder = '予定';
     estInp.addEventListener('input', saveTasks);
 
+    const spacer = document.createElement('span');
+    spacer.style.flex = '1';
+
     const copyBtn = document.createElement('button');
     copyBtn.textContent = '❐';
     copyBtn.className = 'btn-icon copy';
@@ -746,11 +741,20 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     delBtn.className = 'btn-icon del';
     delBtn.onclick = () => { div.remove(); saveTasks(); };
 
-    // controls row: tag + time + btns
+    mainRow.append(handle, chk, tagSel, estInp, spacer, copyBtn, delBtn);
+
+    // ── 下段：タスク名 ──
     const ctrlRow = document.createElement('div');
     ctrlRow.className = 'task-row-controls';
-    ctrlRow.append(tagSel, estInp, copyBtn, delBtn);
 
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'task-input';
+    inp.value = text;
+    inp.placeholder = 'タスクを入力';
+    inp.addEventListener('input', saveTasks);
+
+    ctrlRow.append(inp);
     div.append(mainRow, ctrlRow);
 
     if (insertAfter) insertAfter.after(div);
