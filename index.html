@@ -69,7 +69,7 @@
         /* ─── ① 起床・就寝時間 ─── */
         .time-grid {
             display: flex;
-            gap: 8px;
+            gap: 20px;
             align-items: end;
         }
         .time-field {
@@ -440,7 +440,7 @@
             <div class="tag-sum-item"><span class="tag-dot B">B</span><span id="sum-B">0分</span></div>
             <div class="tag-sum-item"><span class="tag-dot C">C</span><span id="sum-C">0分</span></div>
             <div class="tag-sum-item"><span class="tag-dot D">D</span><span id="sum-D">0分</span></div>
-            <div class="tag-sum-item"><span class="tag-dot E">E</span><span id="sum-E">0分</span></div>
+            <div class="tag-sum-item"><span class="tag-dot E">R</span><span id="sum-E">0分</span></div>
             <div class="tag-sum-item"><span class="tag-dot T">Total</span><span id="sum-Total">0分</span></div>
         </div>
         <div class="progress-wrap">
@@ -622,9 +622,11 @@ const taskContainer = document.getElementById('task-container');
 const progressFill  = document.getElementById('progress-fill');
 const progressLabel = document.getElementById('progress-label');
 
+// Desktop drag
 taskContainer.addEventListener('dragover', e => {
     e.preventDefault();
     const dragging = document.querySelector('.task-row.dragging');
+    if (!dragging) return;
     const afterEl = getDragAfterElement(taskContainer, e.clientY);
     if (afterEl == null) taskContainer.appendChild(dragging);
     else taskContainer.insertBefore(dragging, afterEl);
@@ -637,6 +639,44 @@ function getDragAfterElement(container, y) {
         const offset = y - box.top - box.height / 2;
         return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
     }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Touch drag (mobile)
+let touchDragging = null;
+let touchClone = null;
+
+function initTouchDrag(handle, row) {
+    handle.addEventListener('touchstart', e => {
+        e.preventDefault();
+        touchDragging = row;
+        row.classList.add('dragging');
+
+        // ghost clone
+        touchClone = row.cloneNode(true);
+        touchClone.style.cssText = `position:fixed;pointer-events:none;opacity:0.7;width:${row.offsetWidth}px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,0.15);border-radius:10px;`;
+        document.body.appendChild(touchClone);
+    }, { passive: false });
+
+    handle.addEventListener('touchmove', e => {
+        e.preventDefault();
+        if (!touchDragging) return;
+        const touch = e.touches[0];
+        touchClone.style.left = (touch.clientX - row.offsetWidth / 2) + 'px';
+        touchClone.style.top  = (touch.clientY - 30) + 'px';
+
+        const afterEl = getDragAfterElement(taskContainer, touch.clientY);
+        if (afterEl == null) taskContainer.appendChild(touchDragging);
+        else taskContainer.insertBefore(touchDragging, afterEl);
+    }, { passive: false });
+
+    handle.addEventListener('touchend', () => {
+        if (touchDragging) {
+            touchDragging.classList.remove('dragging');
+            touchDragging = null;
+            saveTasks();
+        }
+        if (touchClone) { touchClone.remove(); touchClone = null; }
+    });
 }
 
 function updateProgress() {
@@ -656,7 +696,7 @@ function updateProgress() {
 }
 
 function updateTagSummary() {
-    const totals = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    const totals = { A: 0, B: 0, C: 0, D: 0, Routine: 0 };
     let grand = 0;
     document.querySelectorAll('.task-row').forEach(row => {
         const tag = row.querySelector('.task-tag-select').value;
@@ -665,9 +705,11 @@ function updateTagSummary() {
         if (totals.hasOwnProperty(tag)) totals[tag] += val;
         grand += val;
     });
-    for (const [tag, min] of Object.entries(totals)) {
-        document.getElementById(`sum-${tag}`).textContent = `${min}分`;
-    }
+    document.getElementById('sum-A').textContent = `${totals.A}分`;
+    document.getElementById('sum-B').textContent = `${totals.B}分`;
+    document.getElementById('sum-C').textContent = `${totals.C}分`;
+    document.getElementById('sum-D').textContent = `${totals.D}分`;
+    document.getElementById('sum-E').textContent = `${totals.Routine}分`;
     const h = Math.floor(grand / 60), m = grand % 60;
     document.getElementById('sum-Total').textContent = h > 0 ? `${h}h${m}m` : `${m}分`;
 }
@@ -679,7 +721,8 @@ function saveTasks() {
         tasks.push({
             tag:  row.querySelector('.task-tag-select').value,
             text: row.querySelector('.task-input').value,
-            est:  times[0].value,
+            est:  times[0] ? times[0].value : '',
+            act:  times[1] ? times[1].value : '',
             done: row.querySelector('.task-check').checked
         });
     });
@@ -688,7 +731,7 @@ function saveTasks() {
     updateTagSummary();
 }
 
-function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
+function createTaskRow(text='', est='', act='', done=false, tag='-', insertAfter=null) {
     const div = document.createElement('div');
     div.className = 'task-row';
     div.draggable = true;
@@ -696,7 +739,7 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     div.addEventListener('dragstart', () => div.classList.add('dragging'));
     div.addEventListener('dragend',   () => { div.classList.remove('dragging'); saveTasks(); });
 
-    // ── 上段 ──
+    // ── 上段：ハンドル＋チェック＋タグ＋予定＋実績＋ボタン ──
     const mainRow = document.createElement('div');
     mainRow.className = 'task-row-main';
 
@@ -712,9 +755,10 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
 
     const tagSel = document.createElement('select');
     tagSel.className = 'task-tag-select';
-    ['-','A','B','C','D','E','待'].forEach(t => {
+    ['-','A','B','C','D','Routine','待'].forEach(t => {
         const o = document.createElement('option');
-        o.value = o.textContent = t;
+        o.value = t;
+        o.textContent = t === 'Routine' ? 'R' : t;
         if (t === tag) o.selected = true;
         tagSel.appendChild(o);
     });
@@ -727,6 +771,13 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     estInp.placeholder = '予定';
     estInp.addEventListener('input', saveTasks);
 
+    const actInp = document.createElement('input');
+    actInp.type = 'text';
+    actInp.className = 'task-time actual';
+    actInp.value = act;
+    actInp.placeholder = '実績';
+    actInp.addEventListener('input', saveTasks);
+
     const spacer = document.createElement('span');
     spacer.style.flex = '1';
 
@@ -734,14 +785,14 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     copyBtn.textContent = '❐';
     copyBtn.className = 'btn-icon copy';
     copyBtn.title = '複製';
-    copyBtn.onclick = () => { createTaskRow(inp.value, estInp.value, false, tagSel.value, div); saveTasks(); };
+    copyBtn.onclick = () => { createTaskRow(inp.value, estInp.value, actInp.value, false, tagSel.value, div); saveTasks(); };
 
     const delBtn = document.createElement('button');
     delBtn.textContent = '✕';
     delBtn.className = 'btn-icon del';
     delBtn.onclick = () => { div.remove(); saveTasks(); };
 
-    mainRow.append(handle, chk, tagSel, estInp, spacer, copyBtn, delBtn);
+    mainRow.append(handle, chk, tagSel, estInp, actInp, spacer, copyBtn, delBtn);
 
     // ── 下段：タスク名 ──
     const ctrlRow = document.createElement('div');
@@ -757,6 +808,9 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     ctrlRow.append(inp);
     div.append(mainRow, ctrlRow);
 
+    // タッチ操作でのドラッグ
+    initTouchDrag(handle, div);
+
     if (insertAfter) insertAfter.after(div);
     else taskContainer.appendChild(div);
     return div;
@@ -765,7 +819,7 @@ function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
 function loadTasks() {
     const saved = localStorage.getItem('lp_tasks');
     taskContainer.innerHTML = '';
-    if (saved) JSON.parse(saved).forEach(t => createTaskRow(t.text, t.est, t.done, t.tag));
+    if (saved) JSON.parse(saved).forEach(t => createTaskRow(t.text, t.est, t.act||'', t.done, t.tag));
     else createTaskRow();
     updateProgress();
     updateTagSummary();
