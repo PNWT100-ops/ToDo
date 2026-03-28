@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4f1ec;
+            --surface: #fffdf9;
+            --surface2: #f9f6f0;
+            --border: #e8e2d9;
+            --text: #2d2926;
+            --text-muted: #9c9289;
+            --accent: #5c6bc0;
+            --accent-light: #e8eaf6;
+            --wake: #f57c00;
+            --wake-light: #fff3e0;
+            --sleep: #37474f;
+            --sleep-light: #eceff1;
+            --green: #388e3c;
+            --green-light: #e8f5e9;
+            --radius: 14px;
+            --shadow: 0 2px 16px rgba(45,41,38,0.07);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px 16px 60px;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 16px 0 14px;
+        }
+        header h1 {
+            font-size: 1.5em;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--text);
+        }
+        .header-clock-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .current-time {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.5em;
+            font-weight: 400;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+        .current-date {
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        /* ─── Card ─── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+        }
+        .card-title {
+            font-size: 0.78em;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+
+        /* ─── ① 起床・就寝時間 ─── */
+        .time-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            align-items: end;
+        }
+        .time-field label {
+            display: block;
+            font-size: 0.72em;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .time-field input[type="time"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface2);
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .time-field input[type="time"]:focus {
+            border-color: var(--accent);
+        }
+
+        .remaining-display {
+            text-align: center;
+            padding: 8px 10px;
+            background: var(--accent-light);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+        .remaining-label {
+            font-size: 0.72em;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .remaining-value {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+        }
+        .remaining-display.past .remaining-label,
+        .remaining-display.past .remaining-value { color: var(--text-muted); }
+        .remaining-display.past { background: var(--surface2); }
+
+        /* ─── ② ボタン ─── */
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .btn-action {
+            padding: 14px 12px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-action:active { transform: scale(0.97); }
+        .btn-wake {
+            background: var(--wake-light);
+            color: var(--wake);
+            border: 1px solid #ffe0b2;
+        }
+        .btn-sleep {
+            background: var(--sleep-light);
+            color: var(--sleep);
+            border: 1px solid #cfd8dc;
+        }
+
+        /* ─── ③ タスク ─── */
+        .tag-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: var(--surface2);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+        }
+        .tag-sum-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.88em;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .tag-dot {
+            font-size: 0.72em;
+            padding: 2px 9px;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+        .tag-dot.A { background: #e91e63; }
+        .tag-dot.B { background: #2196f3; }
+        .tag-dot.C { background: #4caf50; }
+        .tag-dot.D { background: #ff9800; }
+        .tag-dot.E { background: #9c27b0; }
+        .tag-dot.T { background: #607d8b; }
+
+        .progress-wrap {
+            background: #e5e0d8;
+            border-radius: 20px;
+            height: 14px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 14px;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, var(--green), #66bb6a);
+            height: 100%;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        .progress-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.65em;
+            font-weight: 700;
+            color: #555;
+        }
+
+        /* Task rows */
+        .task-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 8px;
+            background: var(--surface);
+            transition: opacity 0.2s;
+        }
+        .task-row.dragging { opacity: 0.4; }
+        .drag-handle {
+            cursor: grab;
+            color: #ccc;
+            font-size: 1.1em;
+            padding: 0 3px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .drag-handle:hover { color: #999; }
+        .task-check {
+            width: 20px; height: 20px;
+            cursor: pointer;
+            accent-color: var(--green);
+            flex-shrink: 0;
+        }
+        .task-input {
+            flex-grow: 1;
+            padding: 9px 10px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: var(--surface2);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.93em;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .task-input:focus { border-color: var(--accent); }
+        .task-tag-select {
+            padding: 9px 2px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: var(--surface2);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-align: center;
+            width: 44px;
+            flex-shrink: 0;
+            font-size: 0.9em;
+        }
+        .task-time {
+            width: 48px;
+            padding: 9px 4px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: var(--surface2);
+            text-align: center;
+            font-size: 0.82em;
+            font-family: 'DM Mono', monospace;
+            flex-shrink: 0;
+            color: var(--text);
+            outline: none;
+        }
+        .task-time.actual { background: #f0f4ff; border-color: #c5cae9; color: var(--accent); }
+        .task-time::placeholder { color: #bbb; }
+        .task-row.done .task-input,
+        .task-row.done .task-time {
+            text-decoration: line-through;
+            color: #bbb;
+            background: var(--surface2);
+        }
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            opacity: 0.35;
+            transition: opacity 0.15s;
+            font-size: 1em;
+            flex-shrink: 0;
+        }
+        .btn-icon:hover { opacity: 1; }
+        .btn-icon.del { color: #e53935; }
+        .btn-icon.copy { color: var(--accent); }
+
+        #btn-add-row {
+            width: 100%;
+            padding: 11px;
+            margin-top: 6px;
+            background: var(--accent-light);
+            color: var(--accent);
+            border: 2px dashed #c5cae9;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: background 0.15s;
+        }
+        #btn-add-row:hover { background: #dde1f8; }
+
+        /* ─── ④ メモ ─── */
+        #memo-area {
+            width: 100%;
+            border: none;
+            background: transparent;
+            resize: none;
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: var(--text);
+            outline: none;
+            font-family: 'DM Sans', sans-serif;
+            min-height: 120px;
+            overflow: hidden;
+        }
+        #memo-area::placeholder { color: #ccc; }
+
+        /* ─── ⑤ ログ ─── */
+        .log-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .log-entry {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.88em;
+        }
+        .log-entry.wake {
+            background: var(--wake-light);
+            border: 1px solid #ffe0b2;
+        }
+        .log-entry.sleep {
+            background: var(--sleep-light);
+            border: 1px solid #cfd8dc;
+        }
+        .log-icon { font-size: 1.1em; }
+        .log-time {
+            font-family: 'DM Mono', monospace;
+            font-weight: 500;
+            font-size: 1em;
+        }
+        .log-entry.wake .log-time { color: var(--wake); }
+        .log-entry.sleep .log-time { color: var(--sleep); }
+        .log-label { color: var(--text-muted); flex: 1; }
+        .log-date { font-size: 0.8em; color: var(--text-muted); }
+        .btn-log-clear {
+            font-size: 0.75em;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: underline;
+            float: right;
+        }
+        .log-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.88em;
+            padding: 12px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ヘッダー：現在時刻 -->
+    <header>
+        <div class="header-clock-row">
+            <div class="current-date" id="today-date"></div>
+            <div class="current-time" id="clock">--:--:--</div>
+        </div>
+    </header>
+
+    <!-- ① 起床・就寝時間 -->
+    <div class="card">
+        <div class="card-title">🌅 起床 / 就寝</div>
+        <div class="time-grid">
+            <div class="time-field">
+                <label>起床時刻</label>
+                <input type="time" id="wake-time-input">
+            </div>
+            <div class="time-field">
+                <label>目標就寝時刻</label>
+                <input type="time" id="sleep-time-input">
+            </div>
+            <div class="remaining-display" id="remaining-display">
+                <span class="remaining-label">就寝まで</span>
+                <span class="remaining-value" id="remaining-value">--:--:--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ② 起床・就寝ボタン -->
+    <div class="card">
+        <div class="btn-row">
+            <button class="btn-action btn-wake" id="btn-wake">☀️ 起床</button>
+            <button class="btn-action btn-sleep" id="btn-sleep">🌙 就寝</button>
+        </div>
+    </div>
+
+    <!-- ③ タスク -->
+    <div class="card">
+        <div class="card-title">📝 タスク</div>
+        <div class="tag-summary" id="tag-summary">
+            <div class="tag-sum-item"><span class="tag-dot A">A</span><span id="sum-A">0分</span></div>
+            <div class="tag-sum-item"><span class="tag-dot B">B</span><span id="sum-B">0分</span></div>
+            <div class="tag-sum-item"><span class="tag-dot C">C</span><span id="sum-C">0分</span></div>
+            <div class="tag-sum-item"><span class="tag-dot D">D</span><span id="sum-D">0分</span></div>
+            <div class="tag-sum-item"><span class="tag-dot E">E</span><span id="sum-E">0分</span></div>
+            <div class="tag-sum-item"><span class="tag-dot T">Total</span><span id="sum-Total">0分</span></div>
+        </div>
+        <div class="progress-wrap">
+            <div class="progress-fill" id="progress-fill"></div>
+            <div class="progress-label" id="progress-label">0%</div>
+        </div>
+        <div id="task-container"></div>
+        <button id="btn-add-row">＋ タスクを追加</button>
+    </div>
+
+    <!-- ④ メモ -->
+    <div class="card">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>📌 メモ</span>
+            <small style="font-weight:400; font-size:0.85em; opacity:0.6; text-transform:none; letter-spacing:0;">自動保存</small>
+        </div>
+        <textarea id="memo-area" placeholder="ここにメモを入力..."></textarea>
+    </div>
+
+    <!-- ⑤ ログ -->
+    <div class="card">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🗒️ 起床 / 就寝ログ</span>
+            <button class="btn-log-clear" id="btn-clear-log">ログを削除</button>
+        </div>
+        <div class="log-list" id="log-list">
+            <div class="log-empty">まだ記録がありません</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ==========================================
+// 時計
+// ==========================================
+function updateClock() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${hh}:${mm}:${ss}`;
+
+    const days = ['日', '月', '火', '水', '木', '金', '土'];
+    const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${days[now.getDay()]}）`;
+    document.getElementById('today-date').textContent = dateStr;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ==========================================
+// ① 起床・就寝 残り時間
+// ==========================================
+const wakeInput  = document.getElementById('wake-time-input');
+const sleepInput = document.getElementById('sleep-time-input');
+const remainingDisplay = document.getElementById('remaining-display');
+const remainingValue   = document.getElementById('remaining-value');
+
+function parseTimeToMinutes(val) {
+    if (!val) return null;
+    const [h, m] = val.split(':').map(Number);
+    return h * 60 + m;
+}
+
+function updateRemaining() {
+    const wakeMin  = parseTimeToMinutes(wakeInput.value);
+    const sleepMin = parseTimeToMinutes(sleepInput.value);
+    if (wakeMin === null || sleepMin === null) {
+        remainingValue.textContent = '--:--:--';
+        remainingDisplay.className = 'remaining-display';
+        return;
+    }
+
+    // 就寝時間が起床時間より前なら翌日とみなす（日跨ぎ対応）
+    let totalSleepMin = sleepMin;
+    if (sleepMin <= wakeMin) totalSleepMin += 24 * 60;
+    const totalMins = totalSleepMin - wakeMin;
+
+    // 現在時刻から就寝時刻までのカウントダウン
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const nowSec = now.getSeconds();
+
+    // 就寝時刻の「今日 or 明日」を決定
+    let sleepDate = new Date();
+    sleepDate.setHours(Math.floor(totalSleepMin % (24*60) / 60), totalSleepMin % 60 % 60, 0, 0);
+    // 日跨ぎなら +1日
+    if (sleepMin <= wakeMin) {
+        sleepDate.setDate(sleepDate.getDate() + 1);
+    }
+
+    const diffMs = sleepDate - now;
+    const diffSec = Math.floor(diffMs / 1000);
+
+    if (diffSec > 0) {
+        const h = Math.floor(diffSec / 3600);
+        const m = Math.floor((diffSec % 3600) / 60);
+        const s = diffSec % 60;
+        remainingValue.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        remainingDisplay.className = 'remaining-display';
+    } else {
+        remainingValue.textContent = '就寝時刻を過ぎました';
+        remainingDisplay.className = 'remaining-display past';
+    }
+}
+
+wakeInput.addEventListener('input', () => {
+    localStorage.setItem('lp_wake', wakeInput.value);
+    updateRemaining();
+});
+sleepInput.addEventListener('input', () => {
+    localStorage.setItem('lp_sleep', sleepInput.value);
+    updateRemaining();
+});
+setInterval(updateRemaining, 1000);
+
+// ==========================================
+// ② 起床・就寝ボタン
+// ==========================================
+document.getElementById('btn-wake').addEventListener('click', () => {
+    const now = new Date();
+    const val = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    wakeInput.value = val;
+    localStorage.setItem('lp_wake', val);
+    updateRemaining();
+    addLog('wake', now);
+});
+
+document.getElementById('btn-sleep').addEventListener('click', () => {
+    const now = new Date();
+    addLog('sleep', now);
+});
+
+// ==========================================
+// ⑤ ログ
+// ==========================================
+function formatDateTime(date) {
+    const days = ['日', '月', '火', '水', '木', '金', '土'];
+    const M = date.getMonth() + 1;
+    const D = date.getDate();
+    const W = days[date.getDay()];
+    const hh = String(date.getHours()).padStart(2,'0');
+    const mm = String(date.getMinutes()).padStart(2,'0');
+    return { date: `${M}/${D}（${W}）`, time: `${hh}:${mm}` };
+}
+
+function addLog(type, date) {
+    const logs = JSON.parse(localStorage.getItem('lp_logs') || '[]');
+    logs.unshift({ type, ts: date.getTime() });
+    localStorage.setItem('lp_logs', JSON.stringify(logs));
+    renderLogs();
+}
+
+function renderLogs() {
+    const logs = JSON.parse(localStorage.getItem('lp_logs') || '[]');
+    const list = document.getElementById('log-list');
+    if (logs.length === 0) {
+        list.innerHTML = '<div class="log-empty">まだ記録がありません</div>';
+        return;
+    }
+    list.innerHTML = logs.map(log => {
+        const d = new Date(log.ts);
+        const { date, time } = formatDateTime(d);
+        const isWake = log.type === 'wake';
+        return `<div class="log-entry ${isWake ? 'wake' : 'sleep'}">
+            <span class="log-icon">${isWake ? '☀️' : '🌙'}</span>
+            <span class="log-time">${time}</span>
+            <span class="log-label">${isWake ? '起床' : '就寝'}</span>
+            <span class="log-date">${date}</span>
+        </div>`;
+    }).join('');
+}
+
+document.getElementById('btn-clear-log').addEventListener('click', () => {
+    if (confirm('ログをすべて削除しますか？')) {
+        localStorage.removeItem('lp_logs');
+        renderLogs();
+    }
+});
+
+// ==========================================
+// ③ タスク
+// ==========================================
+const taskContainer = document.getElementById('task-container');
+const progressFill  = document.getElementById('progress-fill');
+const progressLabel = document.getElementById('progress-label');
+
+taskContainer.addEventListener('dragover', e => {
+    e.preventDefault();
+    const dragging = document.querySelector('.task-row.dragging');
+    const afterEl = getDragAfterElement(taskContainer, e.clientY);
+    if (afterEl == null) taskContainer.appendChild(dragging);
+    else taskContainer.insertBefore(dragging, afterEl);
+});
+
+function getDragAfterElement(container, y) {
+    const els = [...container.querySelectorAll('.task-row:not(.dragging)')];
+    return els.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function updateProgress() {
+    const rows = document.querySelectorAll('.task-row');
+    let total = 0, done = 0;
+    rows.forEach(row => {
+        const tag = row.querySelector('.task-tag-select').value;
+        if (tag !== '待') {
+            total++;
+            if (row.querySelector('.task-check').checked) done++;
+        }
+    });
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    progressFill.style.width = pct + '%';
+    progressLabel.textContent = pct + '%';
+    progressLabel.style.color = pct > 55 ? '#fff' : '#555';
+}
+
+function updateTagSummary() {
+    const totals = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    let grand = 0;
+    document.querySelectorAll('.task-row').forEach(row => {
+        const tag = row.querySelector('.task-tag-select').value;
+        if (tag === '待') return;
+        const val = parseInt((row.querySelectorAll('.task-time')[0].value.match(/\d+/) || ['0'])[0]);
+        if (totals.hasOwnProperty(tag)) totals[tag] += val;
+        grand += val;
+    });
+    for (const [tag, min] of Object.entries(totals)) {
+        document.getElementById(`sum-${tag}`).textContent = `${min}分`;
+    }
+    const h = Math.floor(grand / 60), m = grand % 60;
+    document.getElementById('sum-Total').textContent = h > 0 ? `${h}h${m}m` : `${m}分`;
+}
+
+function saveTasks() {
+    const tasks = [];
+    document.querySelectorAll('.task-row').forEach(row => {
+        const times = row.querySelectorAll('.task-time');
+        tasks.push({
+            tag:  row.querySelector('.task-tag-select').value,
+            text: row.querySelector('.task-input').value,
+            est:  times[0].value,
+            act:  times[1].value,
+            done: row.querySelector('.task-check').checked
+        });
+    });
+    localStorage.setItem('lp_tasks', JSON.stringify(tasks));
+    updateProgress();
+    updateTagSummary();
+}
+
+function createTaskRow(text='', est='', act='', done=false, tag='-', insertAfter=null) {
+    const div = document.createElement('div');
+    div.className = 'task-row';
+    div.draggable = true;
+    if (done) div.classList.add('done');
+    div.addEventListener('dragstart', () => div.classList.add('dragging'));
+    div.addEventListener('dragend',   () => { div.classList.remove('dragging'); saveTasks(); });
+
+    const handle = document.createElement('span');
+    handle.className = 'drag-handle';
+    handle.textContent = '⣿';
+
+    const tagSel = document.createElement('select');
+    tagSel.className = 'task-tag-select';
+    ['-','A','B','C','D','E','待'].forEach(t => {
+        const o = document.createElement('option');
+        o.value = o.textContent = t;
+        if (t === tag) o.selected = true;
+        tagSel.appendChild(o);
+    });
+    tagSel.addEventListener('change', saveTasks);
+
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.className = 'task-check';
+    chk.checked = done;
+    chk.addEventListener('change', () => { div.classList.toggle('done', chk.checked); saveTasks(); });
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'task-input';
+    inp.value = text;
+    inp.placeholder = 'タスク';
+    inp.addEventListener('input', saveTasks);
+
+    const estInp = document.createElement('input');
+    estInp.type = 'text';
+    estInp.className = 'task-time';
+    estInp.value = est;
+    estInp.placeholder = '予定';
+    estInp.addEventListener('input', saveTasks);
+
+    const actInp = document.createElement('input');
+    actInp.type = 'text';
+    actInp.className = 'task-time actual';
+    actInp.value = act;
+    actInp.placeholder = '実績';
+    actInp.addEventListener('input', saveTasks);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '❐';
+    copyBtn.className = 'btn-icon copy';
+    copyBtn.title = '複製';
+    copyBtn.onclick = () => { createTaskRow(inp.value, estInp.value, actInp.value, false, tagSel.value, div); saveTasks(); };
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '✕';
+    delBtn.className = 'btn-icon del';
+    delBtn.onclick = () => { div.remove(); saveTasks(); };
+
+    div.append(handle, chk, inp, tagSel, estInp, actInp, copyBtn, delBtn);
+
+    if (insertAfter) insertAfter.after(div);
+    else taskContainer.appendChild(div);
+    return div;
+}
+
+function loadTasks() {
+    const saved = localStorage.getItem('lp_tasks');
+    taskContainer.innerHTML = '';
+    if (saved) JSON.parse(saved).forEach(t => createTaskRow(t.text, t.est, t.act, t.done, t.tag));
+    else createTaskRow();
+    updateProgress();
+    updateTagSummary();
+}
+
+document.getElementById('btn-add-row').addEventListener('click', () => { createTaskRow(); saveTasks(); });
+
+// ==========================================
+// ④ メモ
+// ==========================================
+const memoArea = document.getElementById('memo-area');
+function autoResizeMemo() {
+    memoArea.style.height = 'auto';
+    memoArea.style.height = memoArea.scrollHeight + 'px';
+}
+memoArea.addEventListener('input', () => {
+    localStorage.setItem('lp_memo', memoArea.value);
+    autoResizeMemo();
+});
+
+// ==========================================
+// 初期化
+// ==========================================
+window.addEventListener('load', () => {
+    const savedWake  = localStorage.getItem('lp_wake');
+    const savedSleep = localStorage.getItem('lp_sleep');
+    if (savedWake)  wakeInput.value  = savedWake;
+    if (savedSleep) sleepInput.value = savedSleep;
+    updateRemaining();
+
+    loadTasks();
+    renderLogs();
+
+    const savedMemo = localStorage.getItem('lp_memo');
+    if (savedMemo) { memoArea.value = savedMemo; autoResizeMemo(); }
+});
+</script>
+</body>
+</html>
