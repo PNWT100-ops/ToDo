@@ -41,34 +41,11 @@
             margin: 0 auto;
         }
 
-        header {
-            text-align: center;
-            padding: 16px 0 14px;
-        }
-        header h1 {
-            font-size: 1.5em;
+        .today-date-display {
+            font-size: 1.15em;
             font-weight: 600;
-            letter-spacing: 0.02em;
             color: var(--text);
-        }
-        .header-clock-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 4px;
-        }
-        .current-time {
-            font-family: 'DM Mono', monospace;
-            font-size: 1.5em;
-            font-weight: 400;
-            color: var(--accent);
-            letter-spacing: -0.5px;
-            line-height: 1;
-        }
-        .current-date {
-            font-size: 0.85em;
-            color: var(--text-muted);
+            letter-spacing: 0.01em;
         }
 
         /* ─── Card ─── */
@@ -93,24 +70,24 @@
         .time-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
             align-items: end;
         }
         .time-field label {
             display: block;
-            font-size: 0.72em;
+            font-size: 0.7em;
             font-weight: 500;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .time-field input[type="time"] {
             width: 100%;
-            padding: 8px 10px;
+            padding: 6px 6px;
             border: 1px solid var(--border);
             border-radius: 8px;
             background: var(--surface2);
             font-family: 'DM Mono', monospace;
-            font-size: 1.05em;
+            font-size: 0.88em;
             color: var(--text);
             outline: none;
             transition: border-color 0.2s;
@@ -121,26 +98,26 @@
 
         .remaining-display {
             text-align: center;
-            padding: 8px 10px;
+            padding: 6px 8px;
             background: var(--accent-light);
             border-radius: 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 1px;
         }
         .remaining-label {
-            font-size: 0.72em;
+            font-size: 0.68em;
             color: var(--accent);
             font-weight: 500;
         }
         .remaining-value {
             font-family: 'DM Mono', monospace;
-            font-size: 1.05em;
+            font-size: 0.88em;
             font-weight: 500;
             color: var(--accent);
-            letter-spacing: -0.5px;
+            letter-spacing: -0.3px;
         }
         .remaining-display.past .remaining-label,
         .remaining-display.past .remaining-value { color: var(--text-muted); }
@@ -240,18 +217,31 @@
         /* Task rows */
         .task-row {
             display: flex;
-            align-items: center;
-            gap: 7px;
+            flex-wrap: wrap;
+            gap: 6px;
             margin-bottom: 8px;
             background: var(--surface);
             transition: opacity 0.2s;
         }
         .task-row.dragging { opacity: 0.4; }
+        .task-row-main {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 0;
+        }
+        .task-row-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: auto;
+        }
         .drag-handle {
             cursor: grab;
             color: #ccc;
             font-size: 1.1em;
-            padding: 0 3px;
+            padding: 0 2px;
             user-select: none;
             flex-shrink: 0;
         }
@@ -408,17 +398,11 @@
 <body>
 <div class="container">
 
-    <!-- ヘッダー：現在時刻 -->
-    <header>
-        <div class="header-clock-row">
-            <div class="current-date" id="today-date"></div>
-            <div class="current-time" id="clock">--:--:--</div>
-        </div>
-    </header>
-
     <!-- ① 起床・就寝時間 -->
     <div class="card">
-        <div class="card-title">🌅 起床 / 就寝</div>
+        <div class="card-title" style="margin-bottom:12px;">
+            <span id="today-date" class="today-date-display"></span>
+        </div>
         <div class="time-grid">
             <div class="time-field">
                 <label>起床時刻</label>
@@ -486,21 +470,15 @@
 
 <script>
 // ==========================================
-// 時計
+// 日付表示
 // ==========================================
-function updateClock() {
+function updateDateDisplay() {
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('clock').textContent = `${hh}:${mm}:${ss}`;
-
     const days = ['日', '月', '火', '水', '木', '金', '土'];
     const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${days[now.getDay()]}）`;
     document.getElementById('today-date').textContent = dateStr;
 }
-setInterval(updateClock, 1000);
-updateClock();
+updateDateDisplay();
 
 // ==========================================
 // ① 起床・就寝 残り時間
@@ -697,7 +675,6 @@ function saveTasks() {
             tag:  row.querySelector('.task-tag-select').value,
             text: row.querySelector('.task-input').value,
             est:  times[0].value,
-            act:  times[1].value,
             done: row.querySelector('.task-check').checked
         });
     });
@@ -706,7 +683,7 @@ function saveTasks() {
     updateTagSummary();
 }
 
-function createTaskRow(text='', est='', act='', done=false, tag='-', insertAfter=null) {
+function createTaskRow(text='', est='', done=false, tag='-', insertAfter=null) {
     const div = document.createElement('div');
     div.className = 'task-row';
     div.draggable = true;
@@ -717,16 +694,6 @@ function createTaskRow(text='', est='', act='', done=false, tag='-', insertAfter
     const handle = document.createElement('span');
     handle.className = 'drag-handle';
     handle.textContent = '⣿';
-
-    const tagSel = document.createElement('select');
-    tagSel.className = 'task-tag-select';
-    ['-','A','B','C','D','E','待'].forEach(t => {
-        const o = document.createElement('option');
-        o.value = o.textContent = t;
-        if (t === tag) o.selected = true;
-        tagSel.appendChild(o);
-    });
-    tagSel.addEventListener('change', saveTasks);
 
     const chk = document.createElement('input');
     chk.type = 'checkbox';
@@ -741,6 +708,21 @@ function createTaskRow(text='', est='', act='', done=false, tag='-', insertAfter
     inp.placeholder = 'タスク';
     inp.addEventListener('input', saveTasks);
 
+    // main row: drag + check + input
+    const mainRow = document.createElement('div');
+    mainRow.className = 'task-row-main';
+    mainRow.append(handle, chk, inp);
+
+    const tagSel = document.createElement('select');
+    tagSel.className = 'task-tag-select';
+    ['-','A','B','C','D','E','待'].forEach(t => {
+        const o = document.createElement('option');
+        o.value = o.textContent = t;
+        if (t === tag) o.selected = true;
+        tagSel.appendChild(o);
+    });
+    tagSel.addEventListener('change', saveTasks);
+
     const estInp = document.createElement('input');
     estInp.type = 'text';
     estInp.className = 'task-time';
@@ -748,25 +730,23 @@ function createTaskRow(text='', est='', act='', done=false, tag='-', insertAfter
     estInp.placeholder = '予定';
     estInp.addEventListener('input', saveTasks);
 
-    const actInp = document.createElement('input');
-    actInp.type = 'text';
-    actInp.className = 'task-time actual';
-    actInp.value = act;
-    actInp.placeholder = '実績';
-    actInp.addEventListener('input', saveTasks);
-
     const copyBtn = document.createElement('button');
     copyBtn.textContent = '❐';
     copyBtn.className = 'btn-icon copy';
     copyBtn.title = '複製';
-    copyBtn.onclick = () => { createTaskRow(inp.value, estInp.value, actInp.value, false, tagSel.value, div); saveTasks(); };
+    copyBtn.onclick = () => { createTaskRow(inp.value, estInp.value, false, tagSel.value, div); saveTasks(); };
 
     const delBtn = document.createElement('button');
     delBtn.textContent = '✕';
     delBtn.className = 'btn-icon del';
     delBtn.onclick = () => { div.remove(); saveTasks(); };
 
-    div.append(handle, chk, inp, tagSel, estInp, actInp, copyBtn, delBtn);
+    // controls row: tag + time + btns
+    const ctrlRow = document.createElement('div');
+    ctrlRow.className = 'task-row-controls';
+    ctrlRow.append(tagSel, estInp, copyBtn, delBtn);
+
+    div.append(mainRow, ctrlRow);
 
     if (insertAfter) insertAfter.after(div);
     else taskContainer.appendChild(div);
@@ -776,7 +756,7 @@ function createTaskRow(text='', est='', act='', done=false, tag='-', insertAfter
 function loadTasks() {
     const saved = localStorage.getItem('lp_tasks');
     taskContainer.innerHTML = '';
-    if (saved) JSON.parse(saved).forEach(t => createTaskRow(t.text, t.est, t.act, t.done, t.tag));
+    if (saved) JSON.parse(saved).forEach(t => createTaskRow(t.text, t.est, t.done, t.tag));
     else createTaskRow();
     updateProgress();
     updateTagSummary();
