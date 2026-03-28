@@ -443,6 +443,49 @@
             font-size: 0.88em;
             padding: 12px 0;
         }
+        .log-edit-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8em;
+            color: var(--text-muted);
+            opacity: 0.5;
+            padding: 2px 4px;
+            transition: opacity 0.15s;
+        }
+        .log-edit-btn:hover { opacity: 1; }
+        .log-edit-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.88em;
+        }
+        .log-edit-row.wake { background: var(--wake-light); border: 1px solid #ffe0b2; }
+        .log-edit-row.sleep { background: var(--sleep-light); border: 1px solid #cfd8dc; }
+        .log-edit-row input[type="date"],
+        .log-edit-row input[type="time"] {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            font-family: 'DM Mono', monospace;
+            font-size: 0.9em;
+            padding: 3px 6px;
+            color: var(--text);
+            outline: none;
+        }
+        .log-save-btn {
+            background: var(--accent-light);
+            border: 1px solid #c5cae9;
+            border-radius: 6px;
+            color: var(--accent);
+            font-size: 0.8em;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 3px 8px;
+        }
     </style>
 </head>
 <body>
@@ -484,9 +527,12 @@
             <div class="tag-sum-item"><span class="tag-dot E">R</span><span id="sum-E">0分</span></div>
             <div class="tag-sum-item"><span class="tag-dot T">Total</span><span id="sum-Total">0分</span></div>
         </div>
-        <div class="progress-wrap">
-            <div class="progress-fill" id="progress-fill"></div>
-            <div class="progress-label" id="progress-label">0%</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <span id="progress-emoji" style="font-size:1.4em;flex-shrink:0;">😴</span>
+            <div class="progress-wrap" style="margin-bottom:0;flex:1;">
+                <div class="progress-fill" id="progress-fill"></div>
+                <div class="progress-label" id="progress-label">0%</div>
+            </div>
         </div>
         <div id="task-container"></div>
         <button id="btn-add-row">＋ タスクを追加</button>
@@ -636,17 +682,61 @@ function renderLogs() {
         list.innerHTML = '<div class="log-empty">まだ記録がありません</div>';
         return;
     }
-    list.innerHTML = logs.map(log => {
+    list.innerHTML = '';
+    logs.forEach((log, idx) => {
         const d = new Date(log.ts);
         const { date, time } = formatDateTime(d);
         const isWake = log.type === 'wake';
-        return `<div class="log-entry ${isWake ? 'wake' : 'sleep'}">
+
+        // 通常表示行
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${isWake ? 'wake' : 'sleep'}`;
+        entry.innerHTML = `
             <span class="log-icon">${isWake ? '☀️' : '🌙'}</span>
             <span class="log-time">${time}</span>
             <span class="log-label">${isWake ? '起床' : '就寝'}</span>
             <span class="log-date">${date}</span>
-        </div>`;
-    }).join('');
+            <button class="log-edit-btn" title="編集">✏️</button>`;
+
+        // 編集行（初期非表示）
+        const editRow = document.createElement('div');
+        editRow.className = `log-edit-row ${isWake ? 'wake' : 'sleep'}`;
+        editRow.style.display = 'none';
+
+        // date入力の初期値を yyyy-MM-dd 形式で
+        const yyyy = d.getFullYear();
+        const MM = String(d.getMonth()+1).padStart(2,'0');
+        const DD = String(d.getDate()).padStart(2,'0');
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+
+        editRow.innerHTML = `
+            <span>${isWake ? '☀️' : '🌙'}</span>
+            <input type="date" value="${yyyy}-${MM}-${DD}">
+            <input type="time" value="${hh}:${mm}">
+            <button class="log-save-btn">保存</button>`;
+
+        // 編集ボタン toggle
+        entry.querySelector('.log-edit-btn').addEventListener('click', () => {
+            entry.style.display = 'none';
+            editRow.style.display = 'flex';
+        });
+
+        // 保存ボタン
+        editRow.querySelector('.log-save-btn').addEventListener('click', () => {
+            const dateVal = editRow.querySelector('input[type="date"]').value;
+            const timeVal = editRow.querySelector('input[type="time"]').value;
+            if (!dateVal || !timeVal) return;
+            const newDate = new Date(`${dateVal}T${timeVal}`);
+            const logs2 = JSON.parse(localStorage.getItem('lp_logs') || '[]');
+            logs2[idx].ts = newDate.getTime();
+            localStorage.setItem('lp_logs', JSON.stringify(logs2));
+            renderLogs();
+        });
+
+        list.appendChild(entry);
+        list.appendChild(editRow);
+    });
 }
 
 document.getElementById('btn-clear-log').addEventListener('click', () => {
@@ -734,6 +824,10 @@ function updateProgress() {
     progressFill.style.width = pct + '%';
     progressLabel.textContent = pct + '%';
     progressLabel.style.color = pct > 55 ? '#fff' : '#555';
+
+    const emoji = pct === 0 ? '😴' : pct < 30 ? '🌱' : pct < 60 ? '🔥' : pct < 100 ? '💪' : '🎉';
+    const el = document.getElementById('progress-emoji');
+    if (el) el.textContent = emoji;
 }
 
 function updateTagSummary() {
